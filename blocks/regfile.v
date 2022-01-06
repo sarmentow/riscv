@@ -8,8 +8,10 @@ module regfile(clk, addr1, addr2, addrWrite, write, dataWrite, rs1, rs2);
 
 	integer i;
 	initial begin
+		$dumpfile("core.vcd");
 		for (i = 0; i < 32; i = i + 1) begin
 			registers[i] <= 0;
+			$dumpvars(0, registers[i]);
 		end
 	end
 
