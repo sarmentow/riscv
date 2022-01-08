@@ -1,8 +1,9 @@
-// Byte addressable
-module datamem(clk, addr, data, write, out);
+
+module datamem(clk, addr, data, write_sel, write, out);
 	input [31:0] addr;
 	input [31:0] data;
 	output reg [31:0] out;
+	input [2:0] write_sel;
 	input clk, write;
 	reg [7:0] memory [16383:0];
 
@@ -16,13 +17,21 @@ module datamem(clk, addr, data, write, out);
 		end
 	end
 
-	// TODO logic for store byte, half word ....
 	always @ (posedge clk) begin
-		if (write && addr < 16383 - 2) 
-			memory[addr] <= data[7:0];
-			memory[addr + 1] <= data[15:8];
-			memory[addr + 2] <= data[23:16];
-			memory[addr + 3] <= data[31:24];
+		if (write) begin
+			if (write_sel == 3'b000 && addr <= 16383) begin
+				memory[addr] <= data[7:0];	
+			end else if (write_sel == 3'b001 && addr < 16383) begin
+				memory[addr] <= data[7:0];
+				memory[addr + 1] <= data[15:8];
+
+			end else if (write_sel == 3'b010 && addr < 16383 - 2) begin
+				memory[addr] <= data[7:0];
+				memory[addr + 1] <= data[15:8];
+				memory[addr + 2] <= data[23:16];
+				memory[addr + 3] <= data[31:24];
+			end
+		end
 		out <= {memory[addr + 3], memory[addr + 2], memory[addr + 1], memory[addr]};
 	end
 endmodule
