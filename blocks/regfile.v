@@ -18,6 +18,9 @@ module regfile(clk, addr1, addr2, addrWrite, write, dataWrite, rs1, rs2);
 	always @ (posedge clk) begin
 		if (write && addrWrite != 5'b00000)
 			registers[addrWrite] <= dataWrite;
+	end
+
+	always @* begin
 		rs1 <= registers[addr1];
 		rs2 <= registers[addr2];
 	end

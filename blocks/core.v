@@ -21,6 +21,7 @@ module core(clk);
 	assign dmem_write = (ins[6:0] == 7'b0100011 ? 1 : 0);
 
 	assign pc_write = clk;
+	assign dmem_data = {ins[31:25], ins[11:7]};
 
 	assign rs2_or_imm = ins[5] ? rs2 : ins[31:20];
 	assign dmem_address_calc = ins[31:20] + rs1;
