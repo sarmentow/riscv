@@ -21,10 +21,12 @@ module core(clk);
 	assign dmem_write = (ins[6:0] == 7'b0100011 ? 1 : 0);
 
 	assign pc_write = clk;
-	assign dmem_data = {ins[31:25], ins[11:7]};
+
+	assign dmem_data = ins[6:0] == 7'b0100011 ? rs2 : 0;
 
 	assign rs2_or_imm = ins[5] ? rs2 : ins[31:20];
-	assign dmem_address_calc = ins[31:20] + rs1;
+	// figure out if it's load or store
+	assign dmem_address_calc = ins[6:0] == 7'b0100011 ? {ins[31:25], ins[11:7]} + rs1 : ins[31:20] + rs1;
 	assign regfile_data = ins[6:0] == 7'b0000011 ? dmem_sel_data_out : alu_out;
 	assign pc_next = pc_out + 4;
 
