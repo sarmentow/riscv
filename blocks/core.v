@@ -38,7 +38,8 @@ module core(clk);
 	assign jal_address_calc = {ins[31],ins[19:12],ins[20],ins[30:21],1'b0} + pc_out;
 	assign jalr_address_calc_last_bit_not_set = ins[31:20] + rs1;
 	assign jalr_address_calc = {jalr_address_calc_last_bit_not_set[31:1], 1'b0};
-	assign jump_sel = (ins[6:0] == 7'b1101111 || ins[6:0] == 7'b1100111) && ins[3] ? jal_address_calc : jalr_address_calc;
+	assign should_jump = (ins[6:0] == 7'b1101111 || ins[6:0] == 7'b1100111) ? 1 : 0;
+	assign jump_sel =  should_jump && ins[3] ? jal_address_calc : jalr_address_calc;
 	assign pc_next = should_jump ? jump_sel : pc_out + 4;
 
 	
