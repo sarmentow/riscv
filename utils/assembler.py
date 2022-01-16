@@ -129,12 +129,31 @@ class Translator:
             imm = f'{int(self.args[3]):012b}'
             funct3 = b_funct3[self.p.op]
             return imm[12] + imm[5:11] + rs2 + rs1 + funct3 + imm[1:5] + imm[11] + opc
-        
+
+class Writer:
+    def __init__(self):
+        # current_byte
+        self.cb = 0
+
+    def write(self, ins, line):
+        if line[-1] == '\n': line = line[:-1]
+        assert len(ins) == 32 
+        beg, end = 0, 7
+        print(f'// {line}')
+        for _ in range(4):
+            print(f'ins[{self.cb}] <= 8\'b{ins[beg:end+1]};')
+            beg += 8
+            end += 8
+            self.cb += 1
+        print()
+
 
 with open(sys.argv[1], 'r') as f:
 #with open('./eg.txt', 'r') as f:
     t = Translator()
+    w = Writer()
     for line in f:
         p = Parser(line)
         t.set_parser(p)
-        print(t.translate())
+        w.write(t.translate(), line)
+
