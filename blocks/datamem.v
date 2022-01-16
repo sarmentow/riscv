@@ -10,6 +10,8 @@ module datamem(clk, addr, data, write_sel, write, out);
 	integer i;
 	
 	initial begin
+		// Testing code
+		// Only dump the first 200 bytes of memory for shorter compile time
 		$dumpfile("core.vcd");
 		for (i = 0; i < 200; i = i + 1) begin
 			memory[i] <= 0;
