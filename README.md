@@ -1,4 +1,4 @@
-# A RISC-V implementation that runs a kernel with a TCP/IP Stack (a.k.a. a computer from the ground-up)
+# A RISC-V implementation that runs a kernel with a TCP/IP Stack (a.k.a. a computer from the ground up)
 ![Incomplete schematic](./schematic.png)
 
 The schematic has some missing pieces (such as data memory) because I mostly used it as a way to think how things would fit, so don't take it as a serious design document.
