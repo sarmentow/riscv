@@ -113,8 +113,8 @@ class Translator:
         elif opt == 's':
             imm = f'{int(self.args[2]):012b}'
             funct_3 = s_funct3[self.p.op]
-            rs1 = register[self.args[1]]
-            rs2 = register[self.args[3]]
+            rs1 = register[self.args[3]]
+            rs2 = register[self.args[1]]
             return imm[5:] + rs2 + rs1 + funct_3 + imm[0:5] + opc
         elif opt == 'j':
             # TODO won't support labels for now, only immediate offsets
@@ -138,12 +138,12 @@ class Writer:
     def write(self, ins, line):
         if line[-1] == '\n': line = line[:-1]
         assert len(ins) == 32 
-        beg, end = 0, 7
+        beg, end = 24, 31
         print(f'// {line}')
         for _ in range(4):
             print(f'ins[{self.cb}] <= 8\'b{ins[beg:end+1]};')
-            beg += 8
-            end += 8
+            beg -= 8
+            end -= 8
             self.cb += 1
         print()
 
