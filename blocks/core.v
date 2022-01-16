@@ -15,15 +15,21 @@ module core(clk);
 	wire regfile_write, dmem_write, pc_write;
 
 	wire should_jump, branch_or_jump, branch_condition_is_true;
+	
+	wire[31:0] upper_immediate_val;
 
 	// Write logic is temporary
 	assign regfile_write = ins[6:0] == 7'b0110011 ? 1'b1 : 
 	                       ins[6:0] == 7'b0010011 ? 1'b1 : 
 		               ins[6:0] == 7'b0000011 ? 1'b1 : 
 		               ins[6:0] == 7'b1101111 ? 1'b1 : // jal
-		               ins[6:0] == 7'b1100111 ? 1'b1 : 0; // jalr
+		               ins[6:0] == 7'b1100111 ? 1'b1 :  // jalr
+					   ins[6:0] == 7'b0110111 ? 1'b1 :
+					   ins[6:0] == 7'b0101111 ? 1'b1 : 0;
 
 	assign dmem_write = (ins[6:0] == 7'b0100011 ? 1 : 0);
+
+	assign upper_immediate_val = {ins[31:12], 12'b000000000000};
 
 	assign pc_write = clk;
 
@@ -33,7 +39,9 @@ module core(clk);
 	// figure out if it's load or store
 	assign dmem_address_calc = ins[6:0] == 7'b0100011 ? {ins[31:25], ins[11:7]} + rs1 : ins[31:20] + rs1;
 	assign regfile_data = ins[6:0] == 7'b0000011 ? dmem_sel_data_out : 
-		              (ins[6:0] == 7'b1101111 || ins[6:0] == 7'b1100111) ? pc_out + 4 : alu_out;
+		              (ins[6:0] == 7'b1101111 || ins[6:0] == 7'b1100111) ? pc_out + 4 : 
+					  ins[6:0] == 7'b0110111 ? upper_immediate_val : 
+					  ins[6:0] == 7'b0010111 ? upper_immediate_val + pc_out : alu_out;
 
 	assign jal_address_calc = {ins[31],ins[19:12],ins[20],ins[30:21],1'b0} + pc_out;
 	assign jalr_address_calc_last_bit_not_set = ins[31:20] + rs1;

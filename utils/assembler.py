@@ -7,7 +7,7 @@
 
 import sys
 
-ops = {'ori', 'jalr', 'bne', 'lw', 'and', 'addi', 'add', 'sb', 'xor', 'sll', 'lbu', 'sltiu', 'sh', 'srli', 'sltu', 'blt', 'beq', 'lh', 'sub', 'slt', 'lhu', 'jal', 'bltu', 'sra', 'sw', 'slti', 'lb', 'srai', 'srl', 'bge', 'andi', 'slli', 'bgeu', 'xori', 'or'} 
+ops = {'ori', 'jalr', 'bne', 'lw', 'and', 'addi', 'add', 'sb', 'xor', 'sll', 'lbu', 'sltiu', 'sh', 'srli', 'sltu', 'blt', 'beq', 'lh', 'sub', 'slt', 'lhu', 'jal', 'bltu', 'sra', 'sw', 'slti', 'lb', 'srai', 'srl', 'bge', 'andi', 'slli', 'bgeu', 'xori', 'or', 'auipc', 'lui'} 
 class Parser:
     def __init__(self, line):
         self.line = line
@@ -38,6 +38,8 @@ def opcode(op):
     elif op in 'sb sh sw'.split(' '): return '0100011'
     elif op in 'addi slti sltiu xori ori andi slli srli srai'.split(' '): return '0010011'
     elif op in 'add sub sll slt sltu xor srl sra or and'.split(' '): return '0110011'
+    elif op == 'lui': return '0110111'
+    elif op == 'auipc': return '0010111'
     else: return None
 
 def optype(op):
@@ -46,6 +48,7 @@ def optype(op):
     elif op in 'sb sh sw'.split(' '): return 's'
     elif op == 'jal': return 'j'
     elif op in 'beq bne blt bge bltu bgeu'.split(' '): return 'b'
+    elif op in 'lui auipc'.split(' '): return 'u'
     else: return None
 
 
@@ -129,6 +132,13 @@ class Translator:
             imm = f'{int(self.args[3]):012b}'
             funct3 = b_funct3[self.p.op]
             return imm[12] + imm[5:11] + rs2 + rs1 + funct3 + imm[1:5] + imm[11] + opc
+        elif opt == 'u':
+            # lui x1, 290
+            rd = register[self.args[1]]
+            imm = f'{int(self.args[2]):020b}'
+            return imm + rd + opc
+
+
 
 class Writer:
     def __init__(self):
