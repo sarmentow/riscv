@@ -1,4 +1,4 @@
-`include "mux.v"
+//`include "mux.v" <- must comment to avoid conflict with control muxes in core.v
 `include "mulh.v"
 `include "mulhu.v"
 
