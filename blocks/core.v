@@ -55,8 +55,6 @@ module core(clk);
 	mux4 pc_next_address_mux(pc_next_line, jal_address_calc, jalr_address_calc, branch_addr, pc_next_sel, pc_next);
 	mux8 regfile_data_source_mux(alu_out4, dmem_out4, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
 	brancher branch_condition_checker(rs1_2, rs2_2, ins2[14:12], should_branch);
-	// TODO This is going to need major refactoring; It needs to take
-	// ins to ins4
 	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], should_branch, pc_next_sel, regfile_data_source_sel, imm_alu_sel, dmem_write, regfile_write);
 	insmem imem(pc_out, ins);
 	regfile registers(clk, ins1[19:15], ins1[24:20], ins4[11:7], regfile_write, regfile_data, rs1_1, rs2_1);

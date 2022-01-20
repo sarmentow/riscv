@@ -1,5 +1,6 @@
 # A RISC-V implementation that runs a kernel with a TCP/IP Stack (a.k.a. a computer from the ground up)
-![Incomplete schematic](./schematic.png)
+![schematic colored by function that the hardware serves](./schematic.png)
+![schematic colored by pipelined paths](./schematic_pipelined.png)
 
 The schematic has some missing pieces (such as data memory) because I mostly used it as a way to think how things would fit, so don't take it as a serious design document.
 
@@ -7,12 +8,12 @@ In order to test the design, you have to input the instructions into the `initia
 
 I wrote this as a learning exercise while watching lectures and reading on computer architecture. As I watched some CS61C lectures from UC Berkeley I found online, I decided that instead of writing a RISC-V core in Logisim (as it gets asked in one of the class projects) I would write it in an actual HDL that would let me later extend it and perhaps synthesize it on an FPGA - at least that's the objective right now.
 
-I also want to write some software to make it useful - as the title of this README suggests - but I need to figure out how to implement some hardware (networking, graphics etc.).
+I also want to write some software to make it useful - as the title of this README suggests - but I need to figure out how to implement some hardware (networking, graphics etc.) for I/O.
 
 ## Parts
 
 * Hardware implementation in Verilog
-	* Single-cycle (for now) RISC-V (RV32I) core
+	* ~~Single-cycle (for now)~~ Pipelined RISC-V (RV32I) core
 	* 16k bytes of data memory
 	* TODO: some networking hardware? (no clue for now)
 * Software
