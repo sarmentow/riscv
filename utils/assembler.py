@@ -7,7 +7,7 @@
 
 import sys
 
-ops = {'ori', 'jalr', 'bne', 'lw', 'and', 'addi', 'add', 'sb', 'xor', 'sll', 'lbu', 'sltiu', 'sh', 'srli', 'sltu', 'blt', 'beq', 'lh', 'sub', 'slt', 'lhu', 'jal', 'bltu', 'sra', 'sw', 'slti', 'lb', 'srai', 'srl', 'bge', 'andi', 'slli', 'bgeu', 'xori', 'or', 'auipc', 'lui'} 
+ops = {'ori', 'jalr', 'bne', 'lw', 'and', 'addi', 'add', 'sb', 'xor', 'sll', 'lbu', 'sltiu', 'sh', 'srli', 'sltu', 'blt', 'beq', 'lh', 'sub', 'slt', 'lhu', 'jal', 'bltu', 'sra', 'sw', 'slti', 'lb', 'srai', 'srl', 'bge', 'andi', 'slli', 'bgeu', 'xori', 'or', 'auipc', 'lui'}
 class Parser:
     def __init__(self, line):
         self.line = line
@@ -123,7 +123,7 @@ class Translator:
             # TODO won't support labels for now, only immediate offsets
             # jal rd, imm     
             rd = register[self.args[1]]
-            imm = f'{int(self.args[2]):020b}'
+            imm = f'{int(self.args[2]):021b}'
             return imm[20] + imm[1:11] + imm[11] + imm[12:20] + rd + opc
         elif opt == 'b':
             # beq rs1, rs2, off

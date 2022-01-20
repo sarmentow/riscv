@@ -11,7 +11,7 @@ module core_tb;
 	initial begin
 		$dumpfile("core.vcd");
 		$dumpvars(0, core_tb);
-		#100;
+		#200;
 		$finish;
 	end
 
