@@ -1,11 +1,15 @@
-module control(opcode, opcode1, opcode2, opcode3, opcode4, branch_comp, pc_next_address_sel, regfile_data_source_sel, imm_alu_sel, dmem_write, regfile_write);
+module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins2_rs1, ins2_rs2,  branch_comp, pc_next_address_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2);
 	input [6:0] opcode, opcode1, opcode2, opcode3, opcode4;
+	input [4:0] ins4_rd, ins3_rd, ins2_rs1, ins2_rs2;
 	input branch_comp;
 
-	// 5 possible outputs for regfile
 	output [1:0] pc_next_address_sel;
+	// 5 possible outputs for regfile; So 3 bits to select
 	output [2:0] regfile_data_source_sel;
-	output imm_alu_sel, dmem_write, regfile_write;
+	output dmem_write, regfile_write;
+	// 3 possible selections; Either rs1 depends on val from ins3 or ins4 or
+	// doesn't depend on any; So 2 bits to select
+	output [1:0] alu_forward_sel_rs1, alu_forward_sel_rs2;
 
 	// pc + 4, jal, jalr, branch
 	// 0     , 1  , 2   , 3
@@ -31,10 +35,6 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, branch_comp, pc_next_
 								     opcode4 == 7'b1100011 ? 2 : // jalr
 								     opcode4 == 7'b1100011 ? 0 : 0; // branches
 
-	// rs2, imm
-	// 0  , 1
-	assign imm_alu_sel = opcode2 == 7'b0010011 ? 1 : 0;
-
 	assign dmem_write = opcode3 == 7'b0100011 ? 1 : 0; // stores
 	
 	assign regfile_write = opcode4 == 7'b0110011 ? 1 : // r-type add, sub
@@ -45,4 +45,12 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, branch_comp, pc_next_
 						   opcode4 == 7'b0010111 ? 1 : // auipc
 						   opcode4 == 7'b1100111 ? 1 : // jal
 						   opcode4 == 7'b1100011 ? 1 : 0; // jalr
+
+	assign alu_forward_sel_rs1 = ins3_rd == ins2_rs1 ? 1 : 
+	                             ins4_rd == ins2_rs1 ? 2 : 0;
+
+	assign alu_forward_sel_rs2 = opcode2 == 7'b0010011 ? 1 : 
+	                             ins3_rd == ins2_rs2 ? 2 :
+								 ins4_rd == ins2_rs2 ? 3 : 0;
+
 endmodule

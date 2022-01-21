@@ -13,7 +13,7 @@ I also want to write some software to make it useful - as the title of this READ
 ## Parts
 
 * Hardware implementation in Verilog
-	* ~~Single-cycle (for now)~~ Pipelined RISC-V (RV32I) core
+	* ~~Single-cycle (for now)~~ Pipelined (5 stages) RISC-V (RV32I) core
 	* 16k bytes of data memory
 	* TODO: some networking hardware? (no clue for now)
 * Software
