@@ -20,8 +20,8 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 								 opcode2 == 7'b0110111 ? 0 : // lui
 								 opcode2 == 7'b0010111 ? 0 : // auipc
 								 opcode2 == 7'b1100111 ? 1 : // jal
-								 opcode2 == 7'b1100011 ? 2 : // jalr
-								 opcode2 == 7'b1100011 ? branch_comp : 0; // branches
+								 opcode2 == 7'b1100111 ? 2 : // jalr
+								 opcode2 == 7'b1100011 && branch_comp ? 3 : 0; // branches
 
 	// alu, dmem out, pc + 4, lui, auipc
 	// 0  , 1       , 2     , 3  , 4
