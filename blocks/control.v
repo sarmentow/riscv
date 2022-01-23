@@ -1,4 +1,6 @@
-module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins2_rs1, ins2_rs2,  branch_comp, pc_next_address_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2);
+// TODO add data forwarding to branches as well, since it's a separate unit from
+// the ALU 
+module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins2_rs1, ins2_rs2,  branch_comp, pc_next_address_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, should_stall_0_1);
 	input [6:0] opcode, opcode1, opcode2, opcode3, opcode4;
 	input [4:0] ins4_rd, ins3_rd, ins2_rs1, ins2_rs2;
 	input branch_comp;
@@ -6,10 +8,10 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 	output [1:0] pc_next_address_sel;
 	// 5 possible outputs for regfile; So 3 bits to select
 	output [2:0] regfile_data_source_sel;
-	output dmem_write, regfile_write;
+	output dmem_write, regfile_write, should_stall_0_1;
 	// 3 possible selections; Either rs1 depends on val from ins3 or ins4 or
 	// doesn't depend on any; So 2 bits to select
-	output [1:0] alu_forward_sel_rs1, alu_forward_sel_rs2;
+	output [1:0] alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2;
 
 	// pc + 4, jal, jalr, branch
 	// 0     , 1  , 2   , 3
@@ -19,7 +21,7 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 								 opcode2 == 7'b0100011 ? 0 : // stores
 								 opcode2 == 7'b0110111 ? 0 : // lui
 								 opcode2 == 7'b0010111 ? 0 : // auipc
-								 opcode2 == 7'b1100111 ? 1 : // jal
+								 opcode2 == 7'b1101111 ? 1 : // jal
 								 opcode2 == 7'b1100111 ? 2 : // jalr
 								 opcode2 == 7'b1100011 && branch_comp ? 3 : 0; // branches
 
@@ -52,5 +54,20 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 	assign alu_forward_sel_rs2 = opcode2 == 7'b0010011 ? 1 : // immediate
 	                             (ins3_rd == ins2_rs2 && opcode2 == 7'b0110011) ? 2 : // R-type
 								 (ins4_rd == ins2_rs2 && opcode2 == 7'b0110011) ? 3 : 0; // same
+
+
+	// 1 is take alu_out3
+	// 2 is take alu_out4
+	// 3 is take dmem_out4
+	// 0 is regular behaviour
+	assign brancher_forward_sel_rs1 = opcode2 == 7'b1100011 && (ins3_rd == ins2_rs1) && (opcode3 == 7'b0110011 || opcode3 == 7'b0010011) ? 1 : 
+		                              opcode2 == 7'b1100011 && ins4_rd == ins2_rs1 && (opcode4 == 7'b0110011 || opcode4 == 7'b0010011) ? 2 : 
+									  opcode2 == 7'b1100011 && ins3_rd == ins2_rs1 && opcode3 == 7'b0000011 ? 3 : 0;
+
+	assign brancher_forward_sel_rs2 = opcode2 == 7'b1100011 && (ins3_rd == ins2_rs2) && (opcode3 == 7'b0110011 || opcode3 == 7'b0010011) ? 1 : 
+		                              opcode2 == 7'b1100011 && ins4_rd == ins2_rs2 && (opcode4 == 7'b0110011 || opcode4 == 7'b0010011) ? 2 : 
+									  opcode2 == 7'b1100011 && ins3_rd == ins2_rs2 && opcode3 == 7'b0000011 ? 3 : 0;
+
+	assign should_stall_0_1 = opcode2 == 7'b1101111 || opcode2 == 7'b1100111 || branch_comp ? 1 : 0;
 
 endmodule

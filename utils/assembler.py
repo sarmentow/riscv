@@ -118,20 +118,30 @@ class Translator:
             funct_3 = s_funct3[self.p.op]
             rs1 = register[self.args[3]]
             rs2 = register[self.args[1]]
-            return imm[5:] + rs2 + rs1 + funct_3 + imm[0:5] + opc
+            imm = imm[::-1]
+            return imm[5:][::-1] + rs2 + rs1 + funct_3 + imm[0:5][::-1] + opc
         elif opt == 'j':
             # TODO won't support labels for now, only immediate offsets
             # jal rd, imm     
             rd = register[self.args[1]]
-            imm = f'{int(self.args[2]):021b}'
-            return imm[20] + imm[1:11] + imm[11] + imm[12:20] + rd + opc
+            if int(self.args[2]) < 0:
+                imm = format(int(self.args[2]) % (1<<21), 'b')
+            else:
+                imm = f'{int(self.args[2]):021b}'
+            imm = imm[::-1]
+            return imm[20] + imm[1:11][::-1] + imm[11] + imm[12:20][::-1] + rd + opc
         elif opt == 'b':
             # beq rs1, rs2, off
-            rs1 = self.args[1]
-            rs2 = self.args[2]
-            imm = f'{int(self.args[3]):012b}'
+            rs1 = register[self.args[1]]
+            rs2 = register[self.args[2]]
+            assert int(self.args[3]) % 2 == 0
+            imm = f'{int(self.args[3]):013b}' # 13 bit number and I'll discard the last bit
             funct3 = b_funct3[self.p.op]
-            return imm[12] + imm[5:11] + rs2 + rs1 + funct3 + imm[1:5] + imm[11] + opc
+            # Must reverse because imm[0] gives me the most significant bit and I want the opposite behaviour
+            imm = imm[::-1]
+            # TODO This doesn't look right, there's something simpler that I could do here to get the indexing and ordering
+            # correct but I'll do this later; First I'll test the core.
+            return imm[12] + imm[5:11][::-1] + rs2 + rs1 + funct3 + imm[1:5][::-1] + imm[11][::-1] + opc
         elif opt == 'u':
             # lui x1, 290
             rd = register[self.args[1]]
@@ -145,7 +155,7 @@ class Writer:
         # current_byte
         self.cb = 0
 
-    def write(self, ins, line):
+    def write_test(self, ins, line):
         if line[-1] == '\n': line = line[:-1]
         assert len(ins) == 32 
         beg, end = 24, 31
@@ -157,6 +167,10 @@ class Writer:
             self.cb += 1
         print()
 
+    def write_hex(self, ins, line):
+        if line[-1] == '\n': line = line[:-1]
+        print(f'// {line}')
+        print(f'{hex(int(ins, 2))}')
 
 with open(sys.argv[1], 'r') as f:
 #with open('./eg.txt', 'r') as f:
@@ -165,5 +179,11 @@ with open(sys.argv[1], 'r') as f:
     for line in f:
         p = Parser(line)
         t.set_parser(p)
-        w.write(t.translate(), line)
+        if sys.argv[2] == 'translate':
+            print(line[:-1] if line[-1] == '\n' else line)
+            print(t.translate())
+        elif sys.argv[2] == 'test':
+            w.write_test(t.translate(), line)
+        elif sys.argv[2] == 'hex':
+            w.write_hex(t.translate(), line)
 
