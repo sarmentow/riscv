@@ -5,7 +5,7 @@ module core_tb;
 
 
 	always begin
-		#5 clk = !clk;
+		#2 clk = !clk;
 	end
 
 	initial begin

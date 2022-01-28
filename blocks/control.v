@@ -48,10 +48,12 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 						   opcode4 == 7'b1100111 ? 1 : // jal
 						   opcode4 == 7'b1100011 ? 1 : 0; // jalr
 
-	assign alu_forward_sel_rs1 = ins3_rd == ins2_rs1 && (opcode2 == 7'b0110011 || opcode2 ==  7'b0010011) && (opcode3 == 7'b0110011 || opcode3 ==  7'b0010011) ? 1 : 
+	assign alu_forward_sel_rs1 = ins2_rs1 == 0  && (opcode2 ==  7'b0110011 || opcode2 == 7'b0010011) ? 0 :
+		                         ins3_rd == ins2_rs1 && (opcode2 == 7'b0110011 || opcode2 ==  7'b0010011) && (opcode3 == 7'b0110011 || opcode3 ==  7'b0010011) ? 1 : 
 	                             ins4_rd == ins2_rs1 && (opcode2 == 7'b0110011 || opcode2 ==  7'b0010011) && (opcode4 == 7'b0110011 || opcode4 ==  7'b0010011) ? 2 : 0;
 
-	assign alu_forward_sel_rs2 = opcode2 == 7'b0010011 ? 1 : // immediate
+	assign alu_forward_sel_rs2 = ins2_rs2 == 0 && opcode2 == 7'b0110011 ? 0 :
+		                         opcode2 == 7'b0010011 ? 1 : // immediate
 	                             (ins3_rd == ins2_rs2 && opcode2 == 7'b0110011) ? 2 : // R-type
 								 (ins4_rd == ins2_rs2 && opcode2 == 7'b0110011) ? 3 : 0; // same
 

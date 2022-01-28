@@ -11,12 +11,12 @@ module pipeline_register(clk, in, clear, out);
 	end
 
 	always @ (posedge clk) begin
-		out <= in;
+		if (clear) begin
+			out <= 32'b00000000000000000000000000010011;
+		end else begin
+			out <= in;
+		end 
 	end
 
-	always @ (posedge clear) begin
-		// Nop
-		out <= 32'b0;
-	end
 
 endmodule

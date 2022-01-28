@@ -12,7 +12,9 @@ module pc(next_address, clk, w, out);
 	always @ (posedge clk) begin
 		if (w) begin
 			out <= next_address;	
-		end 
+		end else begin
+			out <= out;
+		end
 	end
 	
 endmodule
