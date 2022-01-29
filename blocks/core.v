@@ -23,7 +23,7 @@ module core(clk);
 	
 	wire[31:0] lui_val3, lui_val4, auipc_val4, auipc_val3;
 
-	wire [1:0] brancher_forward_sel_rs1, brancher_forward_sel_rs2;
+	wire [2:0] brancher_forward_sel_rs1, brancher_forward_sel_rs2;
 	wire [2:0] alu_forward_sel_rs1, alu_forward_sel_rs2;
 	wire dmem_store_data_forward_sel;
 
@@ -77,8 +77,8 @@ module core(clk);
 	mux8 alu_rs2_forward_mux(rs2_2, {{20{ins2[31]}}, ins2[31:20]}, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, alu_forward_sel_rs2, alu_rs2_in);
 	// I need to change my alu_foward_sel_rs2 bit width plus logic.
 
-	mux4 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out4, brancher_forward_sel_rs1, brancher_rs1_2_in);
-	mux4 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out4, brancher_forward_sel_rs2, brancher_rs2_2_in);
+	mux8 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out4, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs1, brancher_rs1_2_in);
+	mux8 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out4, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs2, brancher_rs2_2_in);
 	brancher branch_condition_checker(ins2[6:0], brancher_rs1_2_in, brancher_rs2_2_in, ins2[14:12], should_branch);
 	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], should_branch, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
 	insmem imem(pc_out, ins);
