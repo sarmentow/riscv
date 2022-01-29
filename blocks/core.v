@@ -21,16 +21,21 @@ module core(clk);
 
 	wire should_branch;
 	
-	wire[31:0] lui_val4, auipc_val4;
+	wire[31:0] lui_val3, lui_val4, auipc_val4, auipc_val3;
 
-	wire [1:0] alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2;
+	wire [1:0] brancher_forward_sel_rs1, brancher_forward_sel_rs2;
+	wire [2:0] alu_forward_sel_rs1, alu_forward_sel_rs2;
+	wire dmem_store_data_forward_sel;
 
 	assign lui_val4 = {ins4[31:12], 12'b000000000000};
+	// Need this for forwarding to execute stage
+	assign lui_val3 = {ins3[31:12], 12'b000000000000};
 	assign auipc_val4 = {ins4[31:12], 12'b000000000000} + pc_out4;
+	assign auipc_val3 = {ins3[31:12], 12'b000000000000} + pc_out3;
 
 	assign pc_write = clk;
 
-	assign dmem_data = rs2_3;
+	assign dmem_data = dmem_store_data_forward_sel ? alu_out4 : rs2_3;
 
 	// figure out if it's load or store
 	assign dmem_address_calc = ins3[6:0] == 7'b0100011 ? {ins3[31:25], ins3[11:7]} + rs1_3 : ins3[31:20] + rs1_3;
@@ -56,18 +61,26 @@ module core(clk);
 	// This is kind of a hack (by "kind of" I mean that it works, and that
 	// I won't change it for now) to flush the pipeline at IF phase
 	// The naming is terrible TODO
-	assign actual_ins0 = ins2[6:0] == 7'b1100011 && should_branch ? 32'b0 : ins;
+	// I need to stall 1 cycle in fetch either if I'm branching or if I'm
+	// loading; The loading stall requires a lot more effort because if I'm
+	// trying to be smart about it I need more logic plus a way of telling my
+	// PC to not update that during that cycle.
+	assign actual_ins0 = (ins2[6:0] == 7'b1100011 && should_branch) || ins1_out[6:0] == 7'b0000011 ? 32'b0 : ins;
 	assign ins1_out = stall_decode ? 32'b00000000000000000000000000010011 : ins1;
 
 	pc program_counter(pc_next, clk, pc_write, pc_out);
 	mux4 pc_next_address_mux(pc_next_line, jal_address_calc, jalr_address_calc, branch_addr, pc_next_sel, pc_next);
-	mux8 regfile_data_source_mux(alu_out4, dmem_out4, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
-	mux4 alu_rs1_forward_mux(rs1_2, alu_out3, alu_out4, 0, alu_forward_sel_rs1, alu_rs1_in);
-	mux4 alu_rs2_forward_mux(rs2_2, {{20{ins2[31]}}, ins2[31:20]}, alu_out3, alu_out4, alu_forward_sel_rs2, alu_rs2_in);
+	// dmem_out isn't pipelined because load instructions only output the
+	// requested data at the next clock cycle anyway
+	mux8 regfile_data_source_mux(alu_out4, dmem_out, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
+	mux8 alu_rs1_forward_mux(rs1_2, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, 0, alu_forward_sel_rs1, alu_rs1_in);
+	mux8 alu_rs2_forward_mux(rs2_2, {{20{ins2[31]}}, ins2[31:20]}, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, alu_forward_sel_rs2, alu_rs2_in);
+	// I need to change my alu_foward_sel_rs2 bit width plus logic.
+
 	mux4 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out4, brancher_forward_sel_rs1, brancher_rs1_2_in);
 	mux4 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out4, brancher_forward_sel_rs2, brancher_rs2_2_in);
 	brancher branch_condition_checker(ins2[6:0], brancher_rs1_2_in, brancher_rs2_2_in, ins2[14:12], should_branch);
-	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], should_branch, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode);
+	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], should_branch, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
 	insmem imem(pc_out, ins);
 	regfile registers(clk, ins1[19:15], ins1[24:20], ins4[11:7], regfile_write, regfile_data, rs1_1, rs2_1);
 	alu alunit(alu_rs1_in, alu_rs2_in, {ins2[31:25],ins2[14:12]}, alu_out);
@@ -77,7 +90,7 @@ module core(clk);
 	pipeline_register reg_pc_out2(clk, pc_out1, 1'b0, pc_out2);
 	pipeline_register reg_pc_out3(clk, pc_out2, 1'b0, pc_out3);
 	pipeline_register reg_pc_out4(clk, pc_out3, 1'b0, pc_out4);
-	pipeline_register reg_ins1(clk, actual_ins0, should_stall,  ins1); // If should branch or jumps, must clear the results of reg1 (i.e. stall)
+	pipeline_register reg_ins1(clk, actual_ins0, 1'b0,  ins1); // If should branch or jumps, must clear the results of reg1 (i.e. stall)
 	pipeline_register reg_ins2(clk, ins1_out, 1'b0, ins2);
 	pipeline_register reg_ins3(clk, ins2, 1'b0, ins3);
 	pipeline_register reg_ins4(clk, ins3, 1'b0, ins4);

@@ -33,8 +33,10 @@ module datamem(clk, addr, data, write_sel, write, out);
 				memory[addr + 2] <= data[23:16];
 				memory[addr + 3] <= data[31:24];
 			end
+			out <= {memory[addr + 3], memory[addr + 2], memory[addr + 1], memory[addr]};
+		end else begin
+			out <= {memory[addr + 3], memory[addr + 2], memory[addr + 1], memory[addr]};
 		end
-		out <= {memory[addr + 3], memory[addr + 2], memory[addr + 1], memory[addr]};
 	end
 endmodule
 
