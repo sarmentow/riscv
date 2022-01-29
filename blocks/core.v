@@ -65,7 +65,7 @@ module core(clk);
 	// loading; The loading stall requires a lot more effort because if I'm
 	// trying to be smart about it I need more logic plus a way of telling my
 	// PC to not update that during that cycle.
-	assign actual_ins0 = (ins2[6:0] == 7'b1100011 && should_branch) || ins1_out[6:0] == 7'b0000011 ? 32'b0 : ins;
+	assign actual_ins0 = (ins2[6:0] == 7'b1100011 && should_branch) ? 32'b00000000000000000000000000010011 : ins;
 	assign ins1_out = stall_decode ? 32'b00000000000000000000000000010011 : ins1;
 
 	pc program_counter(pc_next, clk, pc_write, pc_out);
@@ -75,8 +75,6 @@ module core(clk);
 	mux8 regfile_data_source_mux(alu_out4, dmem_out, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
 	mux8 alu_rs1_forward_mux(rs1_2, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, 0, alu_forward_sel_rs1, alu_rs1_in);
 	mux8 alu_rs2_forward_mux(rs2_2, {{20{ins2[31]}}, ins2[31:20]}, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, alu_forward_sel_rs2, alu_rs2_in);
-	// I need to change my alu_foward_sel_rs2 bit width plus logic.
-
 	mux8 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out4, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs1, brancher_rs1_2_in);
 	mux8 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out4, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs2, brancher_rs2_2_in);
 	brancher branch_condition_checker(ins2[6:0], brancher_rs1_2_in, brancher_rs2_2_in, ins2[14:12], should_branch);
