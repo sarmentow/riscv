@@ -69,13 +69,13 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 	// 0 is regular behaviour
 	assign brancher_forward_sel_rs1 = opcode2 == 7'b1100011 && (ins3_rd == ins2_rs1) && (opcode3 == 7'b0110011 || opcode3 == 7'b0010011) ? 1 : 
 		                              opcode2 == 7'b1100011 && ins4_rd == ins2_rs1 && (opcode4 == 7'b0110011 || opcode4 == 7'b0010011) ? 2 : 
-									  opcode2 == 7'b1100011 && ins3_rd == ins2_rs1 && opcode3 == 7'b0000011 ? 3 : 
+									  opcode2 == 7'b1100011 && ins4_rd == ins2_rs1 && opcode4 == 7'b0000011 ? 3 : 
 								      opcode2 == 7'b1100011 && opcode3 == 7'b0110111 && ins3_rd == ins2_rs1 ? 4 : 
 									  opcode2 == 7'b1100011 && opcode3 == 7'b0010111 && ins3_rd == ins2_rs1 ? 5 : 0;
 
 	assign brancher_forward_sel_rs2 = opcode2 == 7'b1100011 && (ins3_rd == ins2_rs2) && (opcode3 == 7'b0110011 || opcode3 == 7'b0010011) ? 1 : 
 		                              opcode2 == 7'b1100011 && ins4_rd == ins2_rs2 && (opcode4 == 7'b0110011 || opcode4 == 7'b0010011) ? 2 : 
-									  opcode2 == 7'b1100011 && ins3_rd == ins2_rs2 && opcode3 == 7'b0000011 ? 3 :
+									  opcode2 == 7'b1100011 && ins4_rd == ins2_rs2 && opcode4 == 7'b0000011 ? 3 :
 								      opcode2 == 7'b1100011 && opcode3 == 7'b0110111 && ins3_rd == ins2_rs2 ? 4 : 
 									  opcode2 == 7'b1100011 && opcode3 == 7'b0010111 && ins3_rd == ins2_rs2 ? 5 : 0;
 
