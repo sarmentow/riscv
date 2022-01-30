@@ -4,7 +4,7 @@ addi x1, x0, 92
 sw x1, 4(x0)
 lw x2, 0(x0)
 lw x3, 4(x0)
-bge x3, x2, 16
+blt x2, x3, 16
 addi x1, x0, 1
 addi x2, x0, 1
 addi x3, x0, 1

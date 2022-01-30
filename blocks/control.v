@@ -1,20 +1,21 @@
-module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins2_rs1, ins2_rs2,  ins3_rs2, branch_comp, pc_next_address_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
+module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins2_rs1, ins2_rs2,  ins3_rs2, ins1_rs1, ins1_rs2, branch_comp, stall_load_use, load_forward_sel_rs1, load_forward_sel_rs2, pc_next_address_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
 	input [6:0] opcode, opcode1, opcode2, opcode3, opcode4;
-	input [4:0] ins4_rd, ins3_rd, ins2_rs1, ins2_rs2, ins3_rs2;
-	input branch_comp;
+	input [4:0] ins4_rd, ins3_rd, ins2_rs1, ins2_rs2, ins3_rs2, ins1_rs1, ins1_rs2;
+	input branch_comp, stall_load_use;
 
-	output [1:0] pc_next_address_sel;
+	output [2:0] pc_next_address_sel;
 	// 5 possible outputs for regfile; So 3 bits to select
 	output [2:0] regfile_data_source_sel;
 	output dmem_write, regfile_write, stall_decode;
 	// 3 possible selections; Either rs1 depends on val from ins3 or ins4 or
 	// doesn't depend on any; So 2 bits to select
 	output [2:0] alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2;
-	output dmem_store_data_forward_sel;
+	output dmem_store_data_forward_sel, load_forward_sel_rs1, load_forward_sel_rs2;
 
 	// pc + 4, jal, jalr, branch
 	// 0     , 1  , 2   , 3
-	assign pc_next_address_sel = opcode2 == 7'b0110011 ? 0 : // r-type add, sub
+	assign pc_next_address_sel = stall_load_use ? 4 :
+		                         opcode2 == 7'b0110011 ? 0 : // r-type add, sub
 		                         opcode2 == 7'b0010011 ? 0 : // i-type addi, subi
 								 opcode2 == 7'b0000011 ? 0 : // loads
 								 opcode2 == 7'b0100011 ? 0 : // stores
@@ -86,5 +87,10 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 	// corresponds to what's feeding the data bus in store instructions) is
 	// equal to the instruction at t - 1's rd, then forward;
 	assign dmem_store_data_forward_sel = (opcode4 == 7'b0110111 || opcode4 == 7'b0010111 || opcode4 == 7'b0010011 || opcode4 == 7'b0110011) && ins4_rd == ins3_rs2 && opcode3 == 7'b0100011 ? 1 : 0;
+	// if at the wb stage I have a load instruction and my current instruction
+	// needs any type of register access for rs1 and it coincides with the rd
+	// from the load instruction, forward
+	assign load_forward_sel_rs1 = opcode4 == 7'b0000011 && (opcode1 == 7'b1100011 || opcode1 == 7'b0000011 || opcode1 == 7'b0010011 || opcode1 == 7'b0110011 || opcode1 == 7'b0100011) && ins1_rs1 == ins4_rd ? 1 : 0;
+	assign load_forward_sel_rs2 = opcode4 == 7'b0000011 && (opcode1 == 7'b1100011 || opcode1 == 7'b0110011 || opcode1 == 7'b0100011) && ins1_rs2 == ins4_rd ? 1 : 0;
 
 endmodule

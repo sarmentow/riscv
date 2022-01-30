@@ -7,24 +7,26 @@
 `include "regfile.v"
 `include "pc.v"
 `include "insmem.v"
+`include "loadstaller.v"
 
 module core(clk);
 	input clk;
 	// I need better names
-	wire [31:0] alu_rs1_in, alu_rs2_in, alu_out, rs1_1, rs2_1, regfile_data; 
+	wire [31:0] alu_rs1_in, alu_rs2_in, alu_out, rs1_1, rs2_1, regfile_data, rs1_1_or_regfile_data, rs2_1_or_regfile_data; 
 	wire [31:0] dmem_out, dmem_address_calc, dmem_data_size_out, dmem_data;
 	wire [31:0] pc_next, pc_out, pc_next_line, ins, branch_addr;
-	wire [1:0] pc_next_sel;
+	wire [2:0] pc_next_sel;
 	wire [31:0] jal_address_calc, jalr_address_calc, jalr_address_calc_last_bit_not_set, branch_imm, brancher_rs1_2_in, brancher_rs2_2_in;
 	wire regfile_write, dmem_write, pc_write;
 	wire [2:0] regfile_data_source_sel;
 
-	wire should_branch;
+	wire should_branch, stall_decode, stall_load_use;
 	
 	wire[31:0] lui_val3, lui_val4, auipc_val4, auipc_val3;
 
 	wire [2:0] brancher_forward_sel_rs1, brancher_forward_sel_rs2;
 	wire [2:0] alu_forward_sel_rs1, alu_forward_sel_rs2;
+	wire load_forward_sel_rs1, load_forward_sel_rs2;
 	wire dmem_store_data_forward_sel;
 
 	assign lui_val4 = {ins4[31:12], 12'b000000000000};
@@ -65,11 +67,13 @@ module core(clk);
 	// loading; The loading stall requires a lot more effort because if I'm
 	// trying to be smart about it I need more logic plus a way of telling my
 	// PC to not update that during that cycle.
-	assign actual_ins0 = (ins2[6:0] == 7'b1100011 && should_branch) ? 32'b00000000000000000000000000010011 : ins;
+	assign actual_ins0 = (ins2[6:0] == 7'b1100011 && should_branch) || stall_load_use ? 32'b00000000000000000000000000010011 : ins;
 	assign ins1_out = stall_decode ? 32'b00000000000000000000000000010011 : ins1;
+	assign rs1_1_or_regfile_data = load_forward_sel_rs1 ? regfile_data : rs1_1;
+	assign rs2_1_or_regfile_data = load_forward_sel_rs2 ? regfile_data : rs2_1;
 
 	pc program_counter(pc_next, clk, pc_write, pc_out);
-	mux4 pc_next_address_mux(pc_next_line, jal_address_calc, jalr_address_calc, branch_addr, pc_next_sel, pc_next);
+	mux8 pc_next_address_mux(pc_next_line, jal_address_calc, jalr_address_calc, branch_addr, pc_out, 0, 0, 0, pc_next_sel, pc_next);
 	// dmem_out isn't pipelined because load instructions only output the
 	// requested data at the next clock cycle anyway
 	mux8 regfile_data_source_mux(alu_out4, dmem_out, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
@@ -78,7 +82,8 @@ module core(clk);
 	mux8 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs1, brancher_rs1_2_in);
 	mux8 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs2, brancher_rs2_2_in);
 	brancher branch_condition_checker(ins2[6:0], brancher_rs1_2_in, brancher_rs2_2_in, ins2[14:12], should_branch);
-	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], should_branch, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
+	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], ins1[19:15], ins1[24:20], should_branch, stall_load_use, load_forward_sel_rs1, load_forward_sel_rs2, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
+	load_staller core_load_staller(ins1, ins, stall_load_use);
 	insmem imem(pc_out, ins);
 	regfile registers(clk, ins1[19:15], ins1[24:20], ins4[11:7], regfile_write, regfile_data, rs1_1, rs2_1);
 	alu alunit(alu_rs1_in, alu_rs2_in, {ins2[31:25],ins2[14:12]}, alu_out);
@@ -92,9 +97,9 @@ module core(clk);
 	pipeline_register reg_ins2(clk, ins1_out, 1'b0, ins2);
 	pipeline_register reg_ins3(clk, ins2, 1'b0, ins3);
 	pipeline_register reg_ins4(clk, ins3, 1'b0, ins4);
-	pipeline_register reg_rs1_2(clk, rs1_1, 1'b0, rs1_2);
+	pipeline_register reg_rs1_2(clk, rs1_1_or_regfile_data, 1'b0, rs1_2);
 	pipeline_register reg_rs1_3(clk, rs1_2, 1'b0, rs1_3);
-	pipeline_register reg_rs2_2(clk, rs2_1, 1'b0, rs2_2);
+	pipeline_register reg_rs2_2(clk, rs2_1_or_regfile_data, 1'b0, rs2_2);
 	pipeline_register reg_rs2_3(clk, rs2_2, 1'b0, rs2_3);
 	pipeline_register reg_alu_out3(clk, alu_out, 1'b0, alu_out3);
 	pipeline_register reg_alu_out4(clk, alu_out3, 1'b0, alu_out4);
