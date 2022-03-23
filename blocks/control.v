@@ -45,8 +45,8 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 						   opcode4 == 7'b0100011 ? 0 : // stores
 						   opcode4 == 7'b0110111 ? 1 : // lui
 						   opcode4 == 7'b0010111 ? 1 : // auipc
-						   opcode4 == 7'b1100111 ? 1 : // jal
-						   opcode4 == 7'b1100011 ? 1 : 0; // jalr
+						   opcode4 == 7'b1101111 ? 1 : // jal
+						   opcode4 == 7'b1100111 ? 1 : 0; // jalr
 
 	assign alu_forward_sel_rs1 = ins2_rs1 == 0  && (opcode2 ==  7'b0110011 || opcode2 == 7'b0010011) ? 0 :
 		                         ins3_rd == ins2_rs1 && (opcode2 == 7'b0110011 || opcode2 ==  7'b0010011) && (opcode3 == 7'b0110011 || opcode3 ==  7'b0010011) ? 1 : 
