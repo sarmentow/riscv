@@ -160,17 +160,16 @@ class Writer:
         # current_byte
         self.cb = 0
 
-    def write_test(self, ins, line):
-        if line[-1] == '\n': line = line[:-1]
+    def write_test(self, ins):
         assert len(ins) == 32 
-        beg, end = 24, 31
-        print(f'// {line}')
-        for _ in range(4):
-            print(f'ins[{self.cb}] <= 8\'b{ins[beg:end+1]};')
-            beg -= 8
-            end -= 8
-            self.cb += 1
-        print()
+        beg = 24
+        end = 31
+        with open('../blocks/program.bin', 'a') as out:
+            for _ in range(4):
+                out.write(ins[beg:end+1])
+                out.write('\n')
+                beg -= 8
+                end -= 8
 
     def write_hex(self, ins, line):
         if line[-1] == '\n': line = line[:-1]
@@ -191,9 +190,14 @@ with open(sys.argv[1], 'r') as f:
 
 with open(sys.argv[1], 'r') as f:
 #with open('./eg.txt', 'r') as f:
+    if sys.argv[2] == 'test':
+        with open('../blocks/program.bin', 'w'): pass # erase current ins contents
+
     t = Translator()
     w = Writer()
+
     for line in f:
+        if line == '\n': continue
         if line.endswith(":\n"): continue
         p = Parser(line)
         t.set_parser(p)
@@ -201,7 +205,7 @@ with open(sys.argv[1], 'r') as f:
             print(line[:-1] if line[-1] == '\n' else line)
             print(t.translate())
         elif sys.argv[2] == 'test':
-            w.write_test(t.translate(), line)
+            w.write_test(t.translate())
         elif sys.argv[2] == 'hex':
             w.write_hex(t.translate(), line)
         t.update_ins_addr()
