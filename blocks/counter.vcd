@@ -1,0 +1,89 @@
+$date
+	Sun Feb  6 14:17:41 2022
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1s
+$end
+$scope module tb_counter $end
+$var wire 1 ! stall $end
+$var reg 1 " clk $end
+$var reg 3 # cycles_in [2:0] $end
+$var reg 1 $ write $end
+$scope module staller $end
+$var wire 1 " clk $end
+$var wire 3 % cycles_in [2:0] $end
+$var wire 1 $ write $end
+$var wire 1 ! stall $end
+$var reg 3 & cycles_left [2:0] $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+$dumpvars
+b0 &
+b0 %
+0$
+b0 #
+0"
+0!
+$end
+#5
+1!
+b110 &
+1"
+b110 #
+b110 %
+1$
+#10
+0"
+0$
+#15
+b101 &
+1"
+#20
+0"
+#25
+b100 &
+1"
+#30
+0"
+#35
+b11 &
+1"
+#40
+0"
+#45
+b10 &
+1"
+#50
+0"
+#55
+b1 &
+1"
+#60
+0"
+#65
+0!
+b0 &
+1"
+#70
+0"
+#75
+1"
+#80
+0"
+#85
+1"
+#90
+0"
+#95
+1"
+#100
+0"
+#105
+1"
+#110
+0"

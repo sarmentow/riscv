@@ -79,6 +79,10 @@ class Translator:
     def __init__(self):
         self.p = None
         self.args = None
+        self.ins_addr = 0
+
+    def update_ins_addr(self):
+        self.ins_addr += 4
 
     def set_parser(self, parser):
         self.p = parser
@@ -121,21 +125,22 @@ class Translator:
             imm = imm[::-1]
             return imm[5:][::-1] + rs2 + rs1 + funct_3 + imm[0:5][::-1] + opc
         elif opt == 'j':
-            # TODO won't support labels for now, only immediate offsets
-            # jal rd, imm     
+            # jal rd, label     
             rd = register[self.args[1]]
-            if int(self.args[2]) < 0:
-                imm = format(int(self.args[2]) % (1<<21), 'b')
+            encoded_label = label_ins_numb[self.args[2]] - self.ins_addr
+            if int(encoded_label) < 0:
+                imm = format(int(encoded_label) % (1<<21), 'b')
             else:
-                imm = f'{int(self.args[2]):021b}'
+                imm = f'{int(encoded_label):021b}'
             imm = imm[::-1]
             return imm[20] + imm[1:11][::-1] + imm[11] + imm[12:20][::-1] + rd + opc
         elif opt == 'b':
             # beq rs1, rs2, off
             rs1 = register[self.args[1]]
             rs2 = register[self.args[2]]
-            assert int(self.args[3]) % 2 == 0
-            imm = f'{int(self.args[3]):013b}' # 13 bit number and I'll discard the last bit
+            encoded_label = label_ins_numb[self.args[3]] - self.ins_addr
+            assert int(encoded_label) % 2 == 0
+            imm = f'{int(encoded_label):013b}' # 13 bit number and I'll discard the last bit
             funct3 = b_funct3[self.p.op]
             # Must reverse because imm[0] gives me the most significant bit and I want the opposite behaviour
             imm = imm[::-1]
@@ -172,11 +177,24 @@ class Writer:
         print(f'// {line}')
         print(f'{hex(int(ins, 2))}')
 
+# first pass, get labels' instruction number
+# the assembler will for now only support
+# labels that use a line of their own
+label_ins_numb = dict()
+with open(sys.argv[1], 'r') as f:
+    ins_addr = 0
+    for line in f:
+        if line.endswith(":\n"):
+            label_ins_numb[line[:-2]] = ins_addr
+        else:
+            ins_addr += 4
+
 with open(sys.argv[1], 'r') as f:
 #with open('./eg.txt', 'r') as f:
     t = Translator()
     w = Writer()
     for line in f:
+        if line.endswith(":\n"): continue
         p = Parser(line)
         t.set_parser(p)
         if sys.argv[2] == 'translate':
@@ -186,4 +204,5 @@ with open(sys.argv[1], 'r') as f:
             w.write_test(t.translate(), line)
         elif sys.argv[2] == 'hex':
             w.write_hex(t.translate(), line)
+        t.update_ins_addr()
 
