@@ -138,5 +138,4 @@ module control(opcode, opcode1, opcode2, opcode3, opcode4, ins4_rd, ins3_rd, ins
 	// only written back on the next clock, then I need to forward the data that's being fed into the regfile in this clock cycle
 	assign load_forward_sel_rs1 = ins4_has_rd && ins1_has_rs1 && (ins1_rs1 == ins4_rd) ? 1 : 0;
 	assign load_forward_sel_rs2 =  ins4_has_rd && ins1_has_rs2 && (ins1_rs2 == ins4_rd) ? 1 : 0;
-
 endmodule

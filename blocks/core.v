@@ -3,21 +3,33 @@
 `include "alu.v"
 `include "control.v"
 `include "brancher.v"
-`include "datamem.v"
 `include "regfile.v"
 `include "pc.v"
 `include "insmem.v"
 `include "loadstaller.v"
 
-module core(clk);
+module core(clk, mem_addr, mem_w, mem_w_sel, mem_in_data, mem_out_data_raw);
 	input clk;
+	input [31:0] mem_out_data_raw;
+	wire [31:0] mem_out_data_formatted_size;
+	assign mem_out_data_formatted_size = ins3[6:0] != 7'b0000011 ? 0 : 
+		                                 ins3[14:12] == 3'b010 ? mem_out_data_raw : // lw
+		       							 ins3[14:12] == 3'b001 ? (mem_out_data_raw[15] == 1'b1 ? {{16{1'b1}}, mem_out_data_raw[15:0]} : {{16{1'b0}}, mem_out_data_raw[15:0]}) : // lh
+										 ins3[14:12] == 3'b000 ? (mem_out_data_raw[7] == 1'b1 ? {{24{1'b1}}, mem_out_data_raw[7:0]} : {{24{1'b0}}, mem_out_data_raw[7:0]}) : // lb
+										 ins3[14:12] == 3'b101 ? {{16{1'b0}}, mem_out_data_raw[15:0]} :  //lhu
+									     ins3[14:12] == 3'b100 ? {{24{1'b0}}, mem_out_data_raw[7:0]} : mem_out_data_raw;  // lbu
+
+	output [31:0] mem_in_data, mem_addr;
+	output [2:0] mem_w_sel;
+	assign mem_w_sel = ins3[14:12];
+	output mem_w;
+
 	// I need better names
 	wire [31:0] alu_rs1_in, alu_rs2_in, alu_out, rs1_1, rs2_1, regfile_data, rs1_1_or_regfile_data, rs2_1_or_regfile_data; 
-	wire [31:0] dmem_out, dmem_address_calc, dmem_data_size_out, dmem_data;
 	wire [31:0] pc_next, pc_out, pc_next_line, ins, branch_addr;
 	wire [2:0] pc_next_sel;
 	wire [31:0] jal_address_calc, jalr_address_calc, jalr_address_calc_last_bit_not_set, branch_imm, brancher_rs1_2_in, brancher_rs2_2_in;
-	wire regfile_write, dmem_write, pc_write;
+	wire regfile_write, pc_write;
 	wire [2:0] regfile_data_source_sel;
 
 	wire should_branch, stall_decode, stall_load_use;
@@ -37,10 +49,10 @@ module core(clk);
 
 	assign pc_write = clk;
 
-	assign dmem_data = dmem_store_data_forward_sel ? alu_out4 : rs2_3;
+	assign mem_in_data = dmem_store_data_forward_sel ? alu_out4 : rs2_3;
 
 	// figure out if it's load or store
-	assign dmem_address_calc = ins3[6:0] == 7'b0100011 ? {ins3[31:25], ins3[11:7]} + rs1_3 : ins3[31:20] + rs1_3;
+	assign mem_addr = ins3[6:0] == 7'b0100011 ? {ins3[31:25], ins3[11:7]} + rs1_3 : ins3[31:20] + rs1_3;
 
 	assign jal_address_calc = {{11{ins2[31]}}, ins2[31],ins2[19:12],ins2[20],ins2[30:21],1'b0} + pc_out2;
 	assign jalr_address_calc_last_bit_not_set = ins2[31:20] + rs1_2;
@@ -58,7 +70,7 @@ module core(clk);
 	wire [31:0] ins1, ins1_out, ins2, ins3, ins4, actual_ins0;
 	wire [31:0] rs1_2, rs1_3, rs2_2, rs2_3;
 	wire [31:0] alu_out3, alu_out4;
-	wire [31:0] dmem_out4;
+	wire [31:0] mem_out_data_4;
 
 	// This is kind of a hack (by "kind of" I mean that it works, and that
 	// I won't change it for now) to flush the pipeline at IF phase
@@ -76,19 +88,17 @@ module core(clk);
 	mux8 pc_next_address_mux(pc_next_line, jal_address_calc, jalr_address_calc, branch_addr, pc_out, 0, 0, 0, pc_next_sel, pc_next);
 	// dmem_out isn't pipelined because load instructions only output the
 	// requested data at the next clock cycle anyway
-	mux8 regfile_data_source_mux(alu_out4, dmem_out, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
+	mux8 regfile_data_source_mux(alu_out4, mem_out_data_formatted_size, pc_out4, lui_val4, auipc_val4, 0, 0, 0, regfile_data_source_sel, regfile_data);
 	mux8 alu_rs1_forward_mux(rs1_2, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, 0, alu_forward_sel_rs1, alu_rs1_in);
 	mux8 alu_rs2_forward_mux(rs2_2, {{20{ins2[31]}}, ins2[31:20]}, alu_out3, alu_out4, lui_val3, auipc_val3, 0, 0, alu_forward_sel_rs2, alu_rs2_in);
-	mux8 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, dmem_out, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs1, brancher_rs1_2_in);
-	mux8 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, dmem_out, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs2, brancher_rs2_2_in);
+	mux8 brancher_rs1_forward_mux(rs1_2, alu_out3, alu_out4, mem_out_data_formatted_size, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs1, brancher_rs1_2_in);
+	mux8 brancher_rs2_forward_mux(rs2_2, alu_out3, alu_out4, mem_out_data_formatted_size, lui_val3, auipc_val3, 0, 0, brancher_forward_sel_rs2, brancher_rs2_2_in);
 	brancher branch_condition_checker(ins2[6:0], brancher_rs1_2_in, brancher_rs2_2_in, ins2[14:12], should_branch);
-	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], ins1[19:15], ins1[24:20], should_branch, stall_load_use, load_forward_sel_rs1, load_forward_sel_rs2, pc_next_sel, regfile_data_source_sel, dmem_write, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
+	control core_control_unit(ins[6:0], ins1[6:0], ins2[6:0], ins3[6:0], ins4[6:0], ins4[11:7], ins3[11:7], ins2[19:15], ins2[24:20], ins3[24:20], ins1[19:15], ins1[24:20], should_branch, stall_load_use, load_forward_sel_rs1, load_forward_sel_rs2, pc_next_sel, regfile_data_source_sel, mem_w, regfile_write, alu_forward_sel_rs1, alu_forward_sel_rs2, brancher_forward_sel_rs1, brancher_forward_sel_rs2, stall_decode, dmem_store_data_forward_sel);
 	load_staller core_load_staller(ins1, ins, stall_load_use);
 	insmem imem(pc_out, ins);
 	regfile registers(clk, ins1[19:15], ins1[24:20], ins4[11:7], regfile_write, regfile_data, rs1_1, rs2_1);
 	alu alunit(alu_rs1_in, alu_rs2_in, {ins2[31:25],ins2[14:12]}, alu_out);
-	datamem dmem(clk, dmem_address_calc, dmem_data, ins3[14:12], dmem_write, dmem_out);
-	datamemSizeSel datamem_size_sel(dmem_out, ins3[14:12], dmem_data_size_out);
 	pipeline_register reg_pc_out1(clk, pc_out, 1'b0, pc_out1);
 	pipeline_register reg_pc_out2(clk, pc_out1, 1'b0, pc_out2);
 	pipeline_register reg_pc_out3(clk, pc_out2, 1'b0, pc_out3);
@@ -103,6 +113,6 @@ module core(clk);
 	pipeline_register reg_rs2_3(clk, rs2_2, 1'b0, rs2_3);
 	pipeline_register reg_alu_out3(clk, alu_out, 1'b0, alu_out3);
 	pipeline_register reg_alu_out4(clk, alu_out3, 1'b0, alu_out4);
-	pipeline_register reg_dmem_out4(clk, dmem_out, 1'b0, dmem_out4);
+	pipeline_register reg_dmem_out4(clk, mem_out_data_formatted_size, 1'b0, mem_out_data_4);
 
 endmodule
